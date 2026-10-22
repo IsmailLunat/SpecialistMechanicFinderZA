@@ -1,0 +1,120 @@
+# Specialist Mechanic Finder ZA
+
+A South African specialist automotive repair directory built with ASP.NET Core MVC, Razor, SQLite, EF Core, and a separate scraper console application.
+
+## Overview
+
+This project provides a searchable directory for South African auto repair businesses, with a focus on specialist workshops for specific vehicle makes and repair categories. It contains:
+
+- ASP.NET Core MVC website with province/city filtering and specialist/general result sections.
+- Shared domain model and ranking logic.
+- SQLite-backed persistence using EF Core.
+- Console scraper for importing CSV records and updating the same database.
+- Automated xUnit tests for ranking and data integrity.
+
+## Prerequisites
+
+- .NET 8 SDK
+- A modern browser
+- Optional: SQLite DB browser for inspection
+
+## Solution structure
+
+- `src/MechanicFinder.Core` – domain entities, scoring, and business rules
+- `src/MechanicFinder.Infrastructure` – EF Core context, data seeding, repositories
+- `src/MechanicFinder.Web` – MVC site, Razor views, controllers, and API endpoints
+- `src/MechanicFinder.Scraper` – CSV import / ingestion console app
+- `tests/MechanicFinder.UnitTests` – rule-level unit tests
+- `tests/MechanicFinder.IntegrationTests` – SQLite-backed integration tests
+
+## Build
+
+```bash
+dotnet restore
+ dotnet build SpecialistMechanicFinder.sln
+```
+
+## Run the web app
+
+```bash
+dotnet run --project src/MechanicFinder.Web/MechanicFinder.Web.csproj
+```
+
+Then open:
+
+- `https://localhost:5001`
+- or the local ASP.NET Core port displayed in the console
+
+## Run the scraper
+
+```bash
+dotnet run --project src/MechanicFinder.Scraper/MechanicFinder.Scraper.csproj -- --import data/demo-businesses.csv --dry-run
+```
+
+## Database
+
+The application uses SQLite and stores the database at a path configured in `appsettings.json`.
+
+Default database location:
+
+```json
+{
+  "Database": {
+    "Path": "data/mechanicfinder.db"
+  }
+}
+```
+
+The database is initialized automatically with `Database.EnsureCreated()` and seeding when the app starts. This is a reliable schema-initialisation approach that does not erase the database on each startup.
+
+## Seed data
+
+The app seeds the nine South African provinces, representative city data, and a small set of demonstration businesses labelled as demo data only.
+
+## CSV import template
+
+Example CSV columns:
+
+```csv
+BusinessName,Province,City,Address,Phone,Website,VehicleMakes,SpecialtyCategories,RatingSource,SourceUrl
+Demo Volvo Clinic,Western Cape,Cape Town,14 Main Road,0215550123,https://example.com,Volvo,Volvo servicing and repairs,Google,https://example.com
+```
+
+## How to customise scoring
+
+The ranking logic is in:
+
+- `src/MechanicFinder.Core/Scoring/SearchRankingService.cs`
+
+Weights and thresholds are configured in the same file and can be adjusted without changing the MVC controllers.
+
+## Compliance and integration notes
+
+- Google and Facebook integrations are represented as extension points and documented as optional, credential-driven integrations.
+- Public search remains supported even when optional live APIs are unavailable.
+- No real API credentials are included in config files.
+
+## Known limitations
+
+- This is a working MVP and not a fully expanded production directory.
+- Optional paid-source integrations are implemented as interfaces and configuration-ready hooks rather than live API integrations without credentials.
+- The initial data set is demonstration-oriented and intentionally not presented as verified real-world business data.
+
+## License
+
+MIT
+
+## Example commands
+
+```bash
+dotnet restore
+ dotnet build
+ dotnet test
+ dotnet run --project src/MechanicFinder.Web/MechanicFinder.Web.csproj
+ dotnet run --project src/MechanicFinder.Scraper/MechanicFinder.Scraper.csproj -- --import data/demo-businesses.csv --dry-run
+```
+
+## Additional notes
+
+This MVP prioritises a searchable, ranked directory using local SQLite data and a maintainable architecture. It is intentionally designed so new discovery and enrichment sources can be plugged in without rewriting the search UI.
+
