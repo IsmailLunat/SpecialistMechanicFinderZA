@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MechanicFinder.Core.Entities;
 
@@ -8,10 +6,12 @@ public class Province
 {
     public int Id { get; set; }
 
-    [Required, MaxLength(150)]
+    [Required]
+    [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
 
-    [Required, MaxLength(20)]
+    [Required]
+    [MaxLength(20)]
     public string Code { get; set; } = string.Empty;
 
     public ICollection<City> Cities { get; set; } = new List<City>();
@@ -21,7 +21,8 @@ public class City
 {
     public int Id { get; set; }
 
-    [Required, MaxLength(150)]
+    [Required]
+    [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
 
     public int ProvinceId { get; set; }
@@ -32,47 +33,47 @@ public class City
 
     [MaxLength(100)]
     public string? LocalityType { get; set; }
-
-    public ICollection<Business> Businesses { get; set; } = new List<Business>();
 }
 
 public class VehicleMake
 {
     public int Id { get; set; }
 
-    [Required, MaxLength(150)]
+    [Required]
+    [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
-    [Required, MaxLength(150)]
+    [Required]
+    [MaxLength(200)]
     public string NormalizedName { get; set; } = string.Empty;
-
-    public ICollection<BusinessVehicleMake> BusinessVehicleMakes { get; set; } = new List<BusinessVehicleMake>();
 }
 
 public class SpecialtyCategory
 {
     public int Id { get; set; }
 
-    [Required, MaxLength(150)]
+    [Required]
+    [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
-    [Required, MaxLength(150)]
+    [Required]
+    [MaxLength(200)]
     public string Slug { get; set; } = string.Empty;
 
     [MaxLength(500)]
     public string? Description { get; set; }
-
-    public ICollection<BusinessSpecialty> BusinessSpecialties { get; set; } = new List<BusinessSpecialty>();
 }
 
 public class Business
 {
     public int Id { get; set; }
 
-    [Required, MaxLength(250)]
+    [Required]
+    [MaxLength(250)]
     public string Name { get; set; } = string.Empty;
 
-    [Required, MaxLength(250)]
+    [Required]
+    [MaxLength(250)]
     public string NormalizedName { get; set; } = string.Empty;
 
     [MaxLength(2000)]
@@ -97,7 +98,6 @@ public class Business
     public string? GoogleMapsUrl { get; set; }
 
     public bool IsActive { get; set; } = true;
-
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? LastVerifiedAtUtc { get; set; }
@@ -144,7 +144,6 @@ public class BusinessSpecialty
 public class BusinessRating
 {
     public int Id { get; set; }
-
     public int BusinessId { get; set; }
     public Business Business { get; set; } = null!;
 
@@ -165,7 +164,6 @@ public class BusinessRating
 public class BusinessSource
 {
     public int Id { get; set; }
-
     public int BusinessId { get; set; }
     public Business Business { get; set; } = null!;
 
@@ -191,7 +189,6 @@ public class BusinessSource
 public class BusinessEvidence
 {
     public int Id { get; set; }
-
     public int BusinessId { get; set; }
     public Business Business { get; set; } = null!;
 
@@ -230,13 +227,45 @@ public class RankedBusiness
     public decimal RatingValue { get; set; }
     public int ReviewCount { get; set; }
     public string Reason { get; set; } = string.Empty;
+    public string SpecialistLabel => Classification == SearchResultClassification.General ? "General service centre" : Classification == SearchResultClassification.ProbableSpecialist ? "Probable specialist" : "Confirmed specialist";
 }
 
-public class BusinessSearchRequest
+public class SearchRequest
 {
     public int ProvinceId { get; set; }
     public int CityId { get; set; }
     public int? VehicleMakeId { get; set; }
     public int? SpecialtyCategoryId { get; set; }
     public string SearchMode { get; set; } = "All";
+}
+
+public class SearchResultModel
+{
+    public string Title { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public List<RankedBusiness> SpecialistResults { get; set; } = new();
+    public List<RankedBusiness> GeneralResults { get; set; } = new();
+}
+
+public class ProvinceCityRow
+{
+    public string Province { get; set; } = string.Empty;
+    public string City { get; set; } = string.Empty;
+    public string? ProvinceCode { get; set; }
+}
+
+public static class SearchResultMessages
+{
+    public const string NoSpecialists = "No specialist businesses matched the selected criteria. Showing general service providers in the chosen city.";
+    public const string NoMatches = "No businesses matched the selected filters. Try a different city, vehicle make, or specialty.";
+}
+
+public static class SearchRankingConfiguration
+{
+    public const double ConfirmedSpecialistThreshold = 18.0;
+    public const double ProbableSpecialistThreshold = 8.0;
+    public const double ExactVehicleMatchWeight = 45.0;
+    public const double ExactSpecialtyMatchWeight = 30.0;
+    public const double EvidenceWeight = 1.0;
+    public const double PublicRatingWeight = 10.0;
 }

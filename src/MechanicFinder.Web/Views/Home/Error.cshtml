@@ -1,0 +1,179 @@
+@model MechanicFinder.Web.Controllers.SearchPageViewModel
+@{
+    ViewData["Title"] = "Find a specialist mechanic";
+}
+
+<div class="hero">
+    <h1>Find a specialist mechanic or repair centre in South Africa</h1>
+    <p>Search by province, city, vehicle make, and speciality. Results are ranked so confirmed specialist expertise appears before general service providers.</p>
+</div>
+
+<div class="search-card">
+    <form asp-action="Search" method="post">
+        <div class="grid">
+            <div class="field">
+                <label asp-for="ProvinceId">Province</label>
+                <select asp-for="ProvinceId" id="provinceSelect" required>
+                    <option value="0">Select a province</option>
+                    @foreach (var province in Model.Provinces)
+                    {
+                        <option value="@province.Id">@province.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="field">
+                <label asp-for="CityId">City</label>
+                <select asp-for="CityId" id="citySelect" disabled>
+                    <option value="0">Select a city</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label asp-for="VehicleMakeId">Vehicle make</label>
+                <select asp-for="VehicleMakeId">
+                    <option value="">Any make</option>
+                    @foreach (var make in Model.VehicleMakes)
+                    {
+                        <option value="@make.Id">@make.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="field">
+                <label asp-for="SpecialtyCategoryId">Specialty</label>
+                <select asp-for="SpecialtyCategoryId">
+                    <option value="">Any specialty</option>
+                    @foreach (var category in Model.SpecialtyCategories)
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="field">
+                <label asp-for="SearchMode">Results</label>
+                <select asp-for="SearchMode">
+                    <option value="All">Specialists + general</option>
+                    <option value="SpecialistsOnly">Specialists only</option>
+                    <option value="GeneralOnly">General only</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label>&nbsp;</label>
+                <button type="submit">Search</button>
+            </div>
+        </div>
+    </form>
+    <div class="info">Ranking is based on specialist relevance first, then available public rating evidence. Specialist classification is stored separately from rating scores.</div>
+</div>
+
+@if (Model.Results.SpecialistResults.Any() || Model.Results.GeneralResults.Any() || !string.IsNullOrWhiteSpace(Model.Results.Message))
+{
+    <div class="results-header">
+        <h2>Results</h2>
+    </div>
+
+    @if (Model.Results.SpecialistResults.Any())
+    {
+        <div class="section-box">
+            <h3>Specialist service centres</h3>
+            @foreach (var result in Model.Results.SpecialistResults)
+            {
+                <div class="result-card">
+                    <div class="badge specialist">@result.SpecialistLabel</div>
+                    <h4>@result.Business.Name</h4>
+                    <div class="meta">@result.Business.City.Name · @result.Business.Address</div>
+                    <div class="meta">Rating: @result.RatingValue.ToString("0.0")/5 from @result.ReviewCount reviews</div>
+                    <p>@result.Business.Description</p>
+                    <p>@result.Reason</p>
+                    @if (!string.IsNullOrWhiteSpace(result.Business.Phone))
+                    {
+                        <p>Phone: <a href="tel:@result.Business.Phone">@result.Business.Phone</a></p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(result.Business.WebsiteUrl))
+                    {
+                        <p>Website: <a href="@result.Business.WebsiteUrl" target="_blank" rel="noopener noreferrer">@result.Business.WebsiteUrl</a></p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(result.Business.GoogleMapsUrl))
+                    {
+                        <p>Maps: <a href="@result.Business.GoogleMapsUrl" target="_blank" rel="noopener noreferrer">Directions</a></p>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.Results.Message))
+    {
+        <div class="section-box">
+            <div class="empty-state">@Model.Results.Message</div>
+        </div>
+    }
+
+    @if (Model.Results.GeneralResults.Any())
+    {
+        <div class="section-box">
+            <h3>General service centres</h3>
+            @foreach (var result in Model.Results.GeneralResults)
+            {
+                <div class="result-card">
+                    <div class="badge general">General service centre</div>
+                    <h4>@result.Business.Name</h4>
+                    <div class="meta">@result.Business.City.Name · @result.Business.Address</div>
+                    <div class="meta">Rating: @result.RatingValue.ToString("0.0")/5 from @result.ReviewCount reviews</div>
+                    <p>@result.Business.Description</p>
+                    <p>General service provider. This business may be relevant but does not meet the specialist classification threshold for the selected filters.</p>
+                </div>
+            }
+        </div>
+    }
+}
+
+@section Scripts {
+    <script>
+        const provinceSelect = document.getElementById('provinceSelect');
+        const citySelect = document.getElementById('citySelect');
+
+        async function loadCities(provinceId) {
+            citySelect.disabled = true;
+            citySelect.innerHTML = '<option value="0">Loading cities...</option>';
+
+            if (!provinceId || provinceId === '0') {
+                citySelect.innerHTML = '<option value="0">Select a city</option>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/locations/cities?provinceId=${provinceId}`);
+                if (!response.ok) {
+                    throw new Error('Unable to load cities for the selected province.');
+                }
+
+                const cities = await response.json();
+                citySelect.innerHTML = '<option value="0">Select a city</option>';
+
+                cities.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city.id;
+                    option.textContent = city.name;
+                    citySelect.appendChild(option);
+                });
+
+                citySelect.disabled = false;
+            } catch (error) {
+                citySelect.innerHTML = '<option value="0">Unable to load cities</option>';
+                alert(error.message || 'A problem occurred while loading the city list.');
+            }
+        }
+
+        provinceSelect.addEventListener('change', function () {
+            loadCities(this.value);
+        });
+
+        const initialProvince = '@Model.ProvinceId';
+        if (initialProvince && initialProvince !== '0') {
+            loadCities(initialProvince);
+        }
+    </script>
+}

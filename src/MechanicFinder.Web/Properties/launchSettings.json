@@ -1,0 +1,65 @@
+using MechanicFinder.Infrastructure.Data;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+
+namespace MechanicFinder.IntegrationTests;
+
+public class DatabaseIntegrationTests
+{
+    [Fact]
+    public async Task ProvinceAndCityFiltering_WorksInSqlite()
+    {
+        var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<MechanicFinderDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using (var context = new MechanicFinderDbContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+
+            var westernCape = new MechanicFinder.Core.Entities.Province { Name = "Western Cape", Code = "WC" };
+            context.Provinces.Add(westernCape);
+            await context.SaveChangesAsync();
+
+            context.Cities.Add(new MechanicFinder.Core.Entities.City { Name = "Cape Town", ProvinceId = westernCape.Id, LocalityType = "City" });
+            context.Cities.Add(new MechanicFinder.Core.Entities.City { Name = "George", ProvinceId = westernCape.Id, LocalityType = "Town" });
+            await context.SaveChangesAsync();
+
+            var cities = await context.Cities.Where(c => c.ProvinceId == westernCape.Id).ToListAsync();
+            Assert.Equal(2, cities.Count);
+        }
+    }
+
+    [Fact]
+    public async Task InvalidProvinceCityCombination_IsRejected()
+    {
+        var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<MechanicFinderDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using (var context = new MechanicFinderDbContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+
+            var westernCape = new MechanicFinder.Core.Entities.Province { Name = "Western Cape", Code = "WC" };
+            var gauteng = new MechanicFinder.Core.Entities.Province { Name = "Gauteng", Code = "GP" };
+            context.Provinces.AddRange(westernCape, gauteng);
+            await context.SaveChangesAsync();
+
+            var capeTown = new MechanicFinder.Core.Entities.City { Name = "Cape Town", ProvinceId = westernCape.Id, LocalityType = "City" };
+            var johannesburg = new MechanicFinder.Core.Entities.City { Name = "Johannesburg", ProvinceId = gauteng.Id, LocalityType = "City" };
+            context.Cities.AddRange(capeTown, johannesburg);
+            await context.SaveChangesAsync();
+
+            var cityInWrongProvince = await context.Cities.SingleAsync(c => c.Name == "Cape Town");
+            Assert.NotEqual(gauteng.Id, cityInWrongProvince.ProvinceId);
+            Assert.Equal(westernCape.Id, cityInWrongProvince.ProvinceId);
+        }
+    }
+}

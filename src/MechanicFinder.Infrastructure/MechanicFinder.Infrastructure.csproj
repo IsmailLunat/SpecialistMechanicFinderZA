@@ -1,0 +1,10 @@
+using MechanicFinder.Core.Entities;
+
+namespace MechanicFinder.Core.Interfaces;
+
+public interface IBusinessSearchService
+{
+    Task<SearchResultModel> SearchAsync(SearchRequest request, CancellationToken cancellationToken = default);
+    Task<List<City>> GetCitiesByProvinceAsync(int provinceId, CancellationToken cancellationToken = default);
+    Task<List<Province>> GetProvincesAsync(CancellationToken cancellationToken = default);
+}

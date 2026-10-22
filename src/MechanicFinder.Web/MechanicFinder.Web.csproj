@@ -1,0 +1,102 @@
+# Specialist Mechanic Finder ZA
+
+A South African specialist automotive repair directory built with ASP.NET Core MVC, Razor, SQLite, EF Core, and a separate scraper console application.
+
+## Overview
+
+This project provides a searchable directory for South African auto repair businesses, with a focus on specialist workshops for specific vehicle makes and repair categories. It includes:
+
+- ASP.NET Core MVC website with province/city filtering and specialist/general result sections.
+- Shared domain model and ranking logic.
+- SQLite-backed persistence using EF Core.
+- Console scraper for importing CSV records and updating the same database.
+- xUnit tests for ranking and database integrity checks.
+
+## Prerequisites
+
+- .NET 8 SDK
+- SQLite (optional, local DB inspection)
+
+## Solution structure
+
+- `src/MechanicFinder.Core` – domain entities, DTOs, scoring logic
+- `src/MechanicFinder.Infrastructure` – EF Core DbContext and SQLite seeding
+- `src/MechanicFinder.Web` – MVC site and API endpoints
+- `src/MechanicFinder.Scraper` – console ingestion and CSV import
+- `tests/MechanicFinder.UnitTests` – unit tests for ranking rules
+- `tests/MechanicFinder.IntegrationTests` – SQLite integration tests
+- `data/` – CSV seed data and demo imports
+
+## Build
+
+```bash
+dotnet restore
+ dotnet build SpecialistMechanicFinder.sln
+```
+
+## Run the web app
+
+```bash
+dotnet run --project src/MechanicFinder.Web/MechanicFinder.Web.csproj
+```
+
+Open the local URL shown in the console, typically:
+
+- `https://localhost:7156`
+
+## Run the scraper
+
+```bash
+dotnet run --project src/MechanicFinder.Scraper/MechanicFinder.Scraper.csproj -- --import data/demo-businesses.csv --dry-run
+```
+
+## Database
+
+The app uses SQLite and writes to `data/mechanicfinder.db` by default.
+
+## Seed data
+
+The application seeds:
+
+- all nine South African provinces
+- representative cities and towns
+- sample vehicle makes
+- sample specialty categories
+- demonstration businesses clearly labelled as demo data only
+
+## CSV template
+
+```csv
+BusinessName,Province,City,Address,Phone,Website,VehicleMakes,SpecialtyCategories,RatingSource,SourceUrl
+Demo Volvo Specialist Cape Town,Western Cape,Cape Town,14 Main Road,0215550101,https://example.com/volvo-demo,Volvo,Automotive electrical systems,Google Maps,https://example.com/volvo-demo
+```
+
+## Notes on external integrations
+
+- Google and Facebook are represented as extension points, not hard-coded dependencies.
+- The app is designed to operate with local SQLite data even when remote APIs are unavailable.
+- No live API credentials are included in configuration.
+
+## How to adjust scoring
+
+Ranking and confidence thresholds are maintained in:
+
+- `src/MechanicFinder.Core/Scoring/SearchRankingService.cs`
+
+This keeps the ranking logic separate from the MVC controllers.
+
+## Limitations
+
+- This is an MVP and intentionally demo-oriented.
+- Optional remote integrations require credentials and can be layered in later without changing the search UX.
+- Data added by the scraper should be treated as local or curated records unless verified through an authorised source.
+
+## Example commands
+
+```bash
+dotnet restore
+ dotnet build
+ dotnet test
+ dotnet run --project src/MechanicFinder.Web/MechanicFinder.Web.csproj
+ dotnet run --project src/MechanicFinder.Scraper/MechanicFinder.Scraper.csproj -- --import data/demo-businesses.csv --dry-run
+```

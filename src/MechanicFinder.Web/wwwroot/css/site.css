@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Specialist Mechanic Finder ZA</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <header class="topbar">
+        <div class="container">
+            <a class="brand" asp-controller="Home" asp-action="Index">Specialist Mechanic Finder ZA</a>
+        </div>
+    </header>
+    <main class="container">
+        @RenderBody()
+    </main>
+    <footer class="footer">
+        Demo data only. This project is intended for educational and local demonstration use.
+    </footer>
+</body>
+</html>

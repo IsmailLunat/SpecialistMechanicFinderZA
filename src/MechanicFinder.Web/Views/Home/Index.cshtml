@@ -1,0 +1,102 @@
+using MechanicFinder.Core.Entities;
+using MechanicFinder.Core.Interfaces;
+using MechanicFinder.Infrastructure.Data;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace MechanicFinder.Web.Controllers;
+
+public class HomeController : Controller
+{
+    private readonly MechanicFinderDbContext _context;
+    private readonly IBusinessSearchService _searchService;
+
+    public HomeController(MechanicFinderDbContext context, IBusinessSearchService searchService)
+    {
+        _context = context;
+        _searchService = searchService;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    {
+        var provinces = await _context.Provinces.OrderBy(p => p.Name).ToListAsync(cancellationToken);
+        var vehicleMakes = await _context.VehicleMakes.OrderBy(v => v.Name).ToListAsync(cancellationToken);
+        var specialties = await _context.SpecialtyCategories.OrderBy(s => s.Name).ToListAsync(cancellationToken);
+
+        var viewModel = new SearchPageViewModel
+        {
+            Provinces = provinces,
+            VehicleMakes = vehicleMakes,
+            SpecialtyCategories = specialties,
+            ProvinceId = 0,
+            CityId = 0,
+            SearchMode = "All"
+        };
+
+        return View(viewModel);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Search(SearchPageViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            model.Provinces = await _context.Provinces.OrderBy(p => p.Name).ToListAsync(cancellationToken);
+            model.VehicleMakes = await _context.VehicleMakes.OrderBy(v => v.Name).ToListAsync(cancellationToken);
+            model.SpecialtyCategories = await _context.SpecialtyCategories.OrderBy(s => s.Name).ToListAsync(cancellationToken);
+            return View("Index", model);
+        }
+
+        var request = new SearchRequest
+        {
+            ProvinceId = model.ProvinceId,
+            CityId = model.CityId,
+            VehicleMakeId = model.VehicleMakeId,
+            SpecialtyCategoryId = model.SpecialtyCategoryId,
+            SearchMode = model.SearchMode
+        };
+
+        var results = await _searchService.SearchAsync(request, cancellationToken);
+
+        model.Results = results;
+        model.Provinces = await _context.Provinces.OrderBy(p => p.Name).ToListAsync(cancellationToken);
+        model.VehicleMakes = await _context.VehicleMakes.OrderBy(v => v.Name).ToListAsync(cancellationToken);
+        model.SpecialtyCategories = await _context.SpecialtyCategories.OrderBy(s => s.Name).ToListAsync(cancellationToken);
+
+        return View("Index", model);
+    }
+
+    [HttpGet("/api/locations/cities")]
+    public async Task<IActionResult> GetCities([FromQuery] int provinceId, CancellationToken cancellationToken)
+    {
+        if (provinceId <= 0)
+        {
+            return BadRequest(new { message = "Province is required." });
+        }
+
+        var cities = await _context.Cities
+            .Where(c => c.ProvinceId == provinceId)
+            .OrderBy(c => c.Name)
+            .Select(c => new { id = c.Id, name = c.Name })
+            .ToListAsync(cancellationToken);
+
+        return Json(cities);
+    }
+
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+    public IActionResult Error() => View();
+}
+
+public class SearchPageViewModel
+{
+    public int ProvinceId { get; set; }
+    public int CityId { get; set; }
+    public int? VehicleMakeId { get; set; }
+    public int? SpecialtyCategoryId { get; set; }
+    public string SearchMode { get; set; } = "All";
+    public List<Province> Provinces { get; set; } = new();
+    public List<VehicleMake> VehicleMakes { get; set; } = new();
+    public List<SpecialtyCategory> SpecialtyCategories { get; set; } = new();
+    public SearchResultModel Results { get; set; } = new();
+}
